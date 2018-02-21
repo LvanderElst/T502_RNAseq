@@ -1,36 +1,36 @@
 
-#creates a series of plots relating to differential expression analysis
-# uses the bioconductor package 'limma'
+# Creates a series of plots relating to differential expression analysis
+# Uses the bioconductor package 'limma'
 
-## loading required packages (requires prior installation of each of the following)
+## Loading required packages (requires prior installation of each of the following)
 require("limma") 
 require("edgeR")
 require("Rsubread")
 require("Biobase")
 require("gplots")
 
-### set your path to the scripts directory
-WD="/N/dc2/scratch/rtraborn/T502_RNAseq/scripts"
+# Setting path to the scripts directory
+WD="/N/u/lvandere/Carbonate/MammalianTissueCulture/T502_RNAseq/scripts"
 setwd(WD)
 
-#obtaining directory paths for both groups
+# Obtaining directory paths for both groups
 bamDir <- "../alignments"
 pristAnnot <- "../annotation/Hybrid2_AUGUSTUS2014_gene.gtf"
 
-#obtaining list of file names for both groups
+# Obtaining list of file names for both groups
 seud_files <- list.files(bamDir, pattern="\\Seud1", full.names=TRUE)
 NHR40_files <- list.files(bamDir, pattern="\\NHR40", full.names=TRUE)
 
 prist_files <- c(seud_files, NHR40_files)
 
-#creating a count table
+# Creating a count table
 prist_fc <- featureCounts(prist_files, annot.ext=pristAnnot, useMetaFeatures=TRUE, strandSpecific=1, isPairedEnd=FALSE, nthreads=16, isGTFAnnotationFile=TRUE, primaryOnly=TRUE)
 
 save(prist_fc, file="prist_DE.RData") #saving our featureCounts data to an R binary
 
-## end of read counts section ##
+## End of read counts section ##
 
-#load("prist_DE.RData") #starting from an R binary containing the featureCounts list created using the commands above. To run the above commands simply uncomment them (remove the leading '#' from each individual command), and commend out this line.
+# Load("prist_DE.RData") #starting from an R binary containing the featureCounts list created using the commands above. To run the above commands simply uncomment them (remove the leading '#' from each individual command), and commend out this line.
 
 dge <- DGEList(counts = prist_fc$counts,
                group = c(rep("seud1",4),rep("nhr40",4)),
@@ -44,12 +44,12 @@ dge <- calcNormFactors(dge)
 
 dge$samples
 
-### making a plot of the library counts data
+### Making a plot of the library counts data
 barplot(dge$samples$lib.size, names=c("Seud1-1","Seud1-2","Seud1-3",
                                       "Seud1-4", "NHR40-1","NHR40-2", "NHR40-3",
                                       "NHR40-4"), las=2, ylim=c(0,30000000))
 
-### making a plot of the counts value
+### Making a plot of the counts value
 logcounts <- cpm(dge,log=TRUE)
 boxplot(logcounts, xlab="", ylab="(log2) counts per million",las=2)
 abline(h=median(logcounts),col="blue")
@@ -68,7 +68,7 @@ colnames(design) <- c("seud1", "nhr40")
 
 design #what does this object look like?
 
-#estimate the dispersion
+# Estimate the dispersion
 
 dge <- estimateGLMCommonDisp(dge, design)
 dge <- estimateGLMTagwiseDisp(dge, design) 
@@ -91,7 +91,7 @@ summary(de <- decideTestsDGE(lrt, p=0.01, adjust="BH"))
 de_tags <- rownames(decideTestsDGE(lrt, p=0.01, adjust="BH"))
 de_tags <- rownames(dge)[as.logical(de)]
 
-#mkaing a smear (i.e. a mean-difference) plot of our data
+# mkaing a smear (i.e. a mean-difference) plot of our data
 
 plotSmear(lrt, de.tags=de_tags)
 abline(h=c(-2,2), col="blue")
@@ -109,7 +109,7 @@ write.csv(prist_top_tags[[1]], file="prist_top_tags.csv", row.names=FALSE) #writ
 save(prist_top_tags, file= "prist_top_tags.RData") #saves the prist_top_tags file as a p-value
 
 ##############
-#Making a heatmap with the differentially-expressed genes
+# Making a heatmap with the differentially-expressed genes
 library(Biobase) #load this required package if you haven't already done so
 library(gplots)
 
@@ -119,7 +119,7 @@ head(de_data)
 
 top_tags <- topTags(lrt, n= 18146, sort.by="none")
 
-#differential analysis results
+# Differential analysis results
 de_data <- cbind(de_data, top_tags[[1]])
 head(de_data)
 
@@ -131,13 +131,13 @@ dge.subset = dge[diff.genes, ]
 colnames(dge.subset$counts) <- c("Seud1-1","Seud1-2","Seud1-3", "Seud1-4", "NHR40-1","NHR40-2", "NHR40-3", "NHR40-4")
 rownames(dge.subset$counts) <- NULL
 
-# plotting the heatmap
+# Plotting the heatmap
 heatmap.2(dge.subset$counts,symm=FALSE,symkey=FALSE, scale="row", 
           density.info="none",trace="none", key=TRUE,margins=c(10,10))
 
 dev.off()
 
-# plotting and saving the heatmap to a file
+# Plotting and saving the heatmap to a file
 pdf("Prist_dge_heatmap.pdf")
 heatmap.2(dge.subset$counts,symm=FALSE,symkey=FALSE, scale="row", density.info="none",trace="none",
           key=TRUE,margins=c(10,10))
